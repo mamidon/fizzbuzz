@@ -5,7 +5,7 @@ use accounts::{AccountDatabase, AccountSummary};
 use csv::{Reader, ReaderBuilder, Writer};
 use std::fmt::Debug;
 use std::fs::File;
-use std::ops::{Index, Sub};
+use std::ops::Sub;
 use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;

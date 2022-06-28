@@ -272,6 +272,26 @@ client_id,available,held,total,locked
 }
 
 #[test]
+fn inconsistent_disputes_are_ignored() {
+    let output = test_case(
+        "\
+    type, client, tx, amount
+    deposit, 1, 1, 42
+    deposit, 2, 2, 5
+    dispute, 1, 2, 0",
+    );
+
+    assert_eq!(
+        output,
+        "\
+client_id,available,held,total,locked
+1,42.0,0.0,42.0,false
+2,5.0,0.0,5.0,false
+"
+    );
+}
+
+#[test]
 fn resolve_releases_relevant_tx_funds() {
     let output = test_case(
         "\

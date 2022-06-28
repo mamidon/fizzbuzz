@@ -162,18 +162,27 @@ impl AccountDatabase {
             recorded_transactions.contains_key(&transaction.id().transaction_id);
         let transaction_is_currently_disputed =
             disputed_transactions.contains(&transaction.id().transaction_id);
+        let client_ids_are_consistent = recorded_transactions
+            .get(&transaction.id().transaction_id)
+            .map_or(true, |t| t.id().client_id == transaction.id().client_id);
 
         match transaction {
             TransactionRecord::Deposit { id, amount } => !transaction_has_been_recorded,
             TransactionRecord::Withdrawl { id, amount } => !transaction_has_been_recorded,
             TransactionRecord::Dispute { id } => {
-                transaction_has_been_recorded && !transaction_is_currently_disputed
+                transaction_has_been_recorded
+                    && !transaction_is_currently_disputed
+                    && client_ids_are_consistent
             }
             TransactionRecord::Resolve { id } => {
-                transaction_has_been_recorded && transaction_is_currently_disputed
+                transaction_has_been_recorded
+                    && transaction_is_currently_disputed
+                    && client_ids_are_consistent
             }
             TransactionRecord::Chargeback { id } => {
-                transaction_has_been_recorded && transaction_is_currently_disputed
+                transaction_has_been_recorded
+                    && transaction_is_currently_disputed
+                    && client_ids_are_consistent
             }
         }
     }
