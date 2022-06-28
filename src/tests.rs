@@ -1,7 +1,62 @@
-use crate::read_transactions_from_text;
+use crate::{read_transactions_from_text, Money};
 
 fn test_case(text: &str) -> String {
     read_transactions_from_text(text).unwrap()
+}
+
+fn from_parts(whole: u32, decimal: u16) -> Money {
+    assert!(decimal < 10000);
+
+    Money(whole as u64 * 10000 + decimal as u64)
+}
+
+// This is not a sufficient amount of testing for implementing your own fixed point math
+// I should probably have used a library
+// In this case I'm not worrying about sign, as we're not allowing that to happen
+// but if we were to do this for real it'd be something worth considering
+#[test]
+fn money_parses_whole_part_correctly() {
+    let actual: Money = "3.14".parse().unwrap();
+
+    assert_eq!(actual, from_parts(3, 1400));
+}
+
+#[test]
+fn money_adds_correctly() {
+    let a: Money = "3.14".parse().unwrap();
+    let b: Money = "1.23".parse().unwrap();
+
+    assert_eq!(a + b, from_parts(4, 3700));
+}
+
+#[test]
+fn money_subs_correctly() {
+    let a: Money = "3.14".parse().unwrap();
+    let b: Money = "1.23".parse().unwrap();
+
+    assert_eq!(a - b, from_parts(1, 9100));
+}
+
+#[test]
+fn given_test_case() {
+    let output = test_case(
+        "\
+type,       client, tx, amount
+deposit,    1,      1,  1.0
+deposit,    2,      2,  2.0
+deposit,    1,      3,  2.0
+withdrawal, 1,      4,  1.5
+withdrawal, 2,      5,  3.0",
+    );
+
+    assert_eq!(
+        output,
+        "\
+client_id,available,held,total,locked
+1,1.5,0.0,1.5,false
+2,2.0,0.0,2.0,false
+"
+    );
 }
 
 #[test]
@@ -184,7 +239,7 @@ fn disputes_hold_only_available_funds() {
     deposit, 1, 1, 42
     deposit, 1, 3, 20
     withdrawal, 1, 2, 30
-    dispute, 1, 1,
+    dispute, 1, 1
     withdrawal, 1, 4, 32",
     );
 
@@ -222,7 +277,7 @@ fn resolve_releases_relevant_tx_funds() {
         "\
     type, client, tx, amount
     deposit, 1, 1, 42
-    dispute, 1, 1,
+    dispute, 1, 1
     resolve, 1, 1,",
     );
 

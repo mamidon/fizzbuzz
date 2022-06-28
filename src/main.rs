@@ -3,8 +3,9 @@
 
 use accounts::{AccountDatabase, AccountSummary};
 use csv::{Reader, ReaderBuilder, Writer};
+use std::fmt::Debug;
 use std::fs::File;
-use std::ops::Sub;
+use std::ops::{Index, Sub};
 use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
@@ -22,7 +23,7 @@ use transactions::{TransactionRecord, TransactionText};
     The naive alternative to fixed precision is using floats.  The problem with that is
     you risk introducing rounding errors -- which is not acceptable for accounting purposes.
 */
-#[derive(PartialEq, Eq, Debug, Clone, Copy, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub struct Money(u64);
 
 impl Add for Money {
@@ -75,9 +76,22 @@ impl ToString for Money {
         let mut s = String::new();
         s.push_str((self.0 / 10000).to_string().as_str());
         s.push('.');
-        s.push_str((self.0 % 10000).to_string().as_str());
+
+        let mut decimal = self.0 % 10000;
+
+        while decimal > 0 && decimal % 10 == 0 {
+            decimal = decimal / 10;
+        }
+
+        s.push_str((decimal).to_string().as_str());
 
         s
+    }
+}
+
+impl Debug for Money {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.to_string().as_str())
     }
 }
 
@@ -97,7 +111,9 @@ impl Money {
     }
 
     fn parse_decimal_part(text: &str) -> Result<u64, MoneyParseError> {
-        let decimal: u64 = text.parse().map_err(|_| MoneyParseError::Malformed)?;
+        let decimal: u64 = format!("{:0<4}", text.trim())
+            .parse()
+            .map_err(|_| MoneyParseError::Malformed)?;
 
         if decimal > 9999 {
             Err(MoneyParseError::ExceededPrecision)
@@ -117,6 +133,7 @@ mod tests;
 fn read_transactions_from_text(text: &str) -> Result<String, Box<dyn Error>> {
     let mut reader = ReaderBuilder::default()
         .trim(csv::Trim::All)
+        .flexible(true)
         .has_headers(true)
         .from_reader(text.as_bytes());
     let mut writer = Writer::from_writer(vec![]);
@@ -163,6 +180,7 @@ fn main() -> std::io::Result<()> {
 
     let mut reader = ReaderBuilder::default()
         .trim(csv::Trim::All)
+        .flexible(true)
         .has_headers(true)
         .from_reader(file);
     let mut writer = Writer::from_writer(io::stdout());
